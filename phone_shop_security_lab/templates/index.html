@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexPhone — Premium Smartphones</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────── -->
+<nav class="nav">
+  <a href="{{ url_for('index') }}" class="nav-brand">
+    <span>⬡</span> NexPhone
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="{{ url_for('index') }}" class="active">Shop</a></li>
+    <li><a href="{{ url_for('search') }}">Search</a></li>
+    <li><a href="{{ url_for('consult') }}">Consult</a></li>
+    {% if session.get('role') == 'admin' %}
+    <li><a href="{{ url_for('admin') }}">Admin</a></li>
+    {% endif %}
+    {% if session.get('user_id') %}
+    <li>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">
+        Logout ({{ session.username }})
+      </a>
+    </li>
+    {% else %}
+    <li><a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">Login</a></li>
+    {% endif %}
+  </ul>
+
+  <div>
+    {% if secure_mode %}
+    <span class="mode-badge secure">Secure Mode</span>
+    {% else %}
+    <span class="mode-badge vuln">Vulnerable Mode</span>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- ── Flash Messages ──────────────────────────────────────── -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-container">
+  {% for category, message in messages %}
+  <div class="flash-msg alert-{{ category }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── Hero ───────────────────────────────────────────────── -->
+<div class="container page-wrapper">
+  <div class="hero">
+    <p class="hero-label">Security Lab · Phone Shop Demo</p>
+    <h1 class="hero-title">
+      Next-gen phones.<br><em>Real-world</em> vulnerabilities.
+    </h1>
+    <p class="hero-sub">
+      Browse our catalog, submit consultations, and log in to explore.
+      This platform intentionally demonstrates SQL Injection attack surfaces
+      for educational purposes.
+    </p>
+  </div>
+
+  <!-- Products -->
+  <div class="section-head">
+    <h2>Our Products</h2>
+  </div>
+
+  <div class="product-grid">
+    {% for p in products %}
+    <div class="card product-card">
+      <div class="product-image-slot">
+        {% if 'iPhone' in p['name'] %}📱
+        {% elif 'Samsung' in p['name'] %}📲
+        {% elif 'Xiaomi' in p['name'] %}🔴
+        {% elif 'Pixel' in p['name'] %}🟢
+        {% elif 'OnePlus' in p['name'] %}🔵
+        {% elif 'Sony' in p['name'] %}🟣
+        {% else %}📱
+        {% endif %}
+      </div>
+      <div class="card-body product-info">
+        <div class="product-name">{{ p['name'] }}</div>
+        <div class="product-desc">{{ p['description'] }}</div>
+        <div class="product-price">${{ "%.2f"|format(p['price']) }}</div>
+        <a href="{{ url_for('product_detail', product_id=p['id']) }}"
+           class="btn btn-outline btn-sm" style="margin-top:.75rem;">
+          View Details →
+        </a>
+      </div>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);">No products found.</p>
+    {% endfor %}
+  </div>
+
+  <!-- Lab note -->
+  <div class="lab-panel" style="margin-top:3rem;">
+    <div class="lab-panel-title">Security Lab — Attack Surfaces</div>
+    <p style="color:var(--text-muted);font-size:.85rem;margin-bottom:1rem;">
+      The following endpoints are injectable in <strong style="color:var(--danger);">VULNERABLE mode</strong>.
+      Set <code class="code-inline">SECURE_MODE = True</code> in <code class="code-inline">config.py</code> to enable defenses.
+    </p>
+    <ul style="list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;">
+      <li>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;">
+          <div style="font-family:var(--mono);font-size:.72rem;color:var(--accent);margin-bottom:.25rem;">POST /login</div>
+          <div style="font-size:.8rem;color:var(--text-muted);">Authentication Bypass</div>
+        </div>
+      </li>
+      <li>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;">
+          <div style="font-family:var(--mono);font-size:.72rem;color:var(--accent);margin-bottom:.25rem;">GET /search?q=</div>
+          <div style="font-size:.8rem;color:var(--text-muted);">UNION / Error / Blind</div>
+        </div>
+      </li>
+      <li>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;">
+          <div style="font-family:var(--mono);font-size:.72rem;color:var(--accent);margin-bottom:.25rem;">POST /consult</div>
+          <div style="font-size:.8rem;color:var(--text-muted);">INSERT-based / UNION</div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- ── Footer ──────────────────────────────────────────────── -->
+<footer class="footer">
+  NexPhone Security Lab · For Educational Use Only · SQL Injection Demo Platform
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ product['name'] }} — NexPhone</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="{{ url_for('index') }}" class="nav-brand"><span>⬡</span> NexPhone</a>
+  <ul class="nav-links">
+    <li><a href="{{ url_for('index') }}">Shop</a></li>
+    <li><a href="{{ url_for('search') }}">Search</a></li>
+    <li><a href="{{ url_for('consult') }}">Consult</a></li>
+    {% if session.get('role') == 'admin' %}<li><a href="{{ url_for('admin') }}">Admin</a></li>{% endif %}
+    {% if session.get('user_id') %}
+    <li><a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Logout</a></li>
+    {% else %}
+    <li><a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">Login</a></li>
+    {% endif %}
+  </ul>
+  {% if secure_mode %}
+  <span class="mode-badge secure">Secure Mode</span>
+  {% else %}
+  <span class="mode-badge vuln">Vulnerable Mode</span>
+  {% endif %}
+</nav>
+
+<div class="container page-wrapper">
+
+  <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm" style="margin-bottom:1.5rem;">
+    ← Back to Shop
+  </a>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;">
+    <!-- Image -->
+    <div>
+      <div class="detail-image">
+        {% if 'iPhone' in product['name'] %}📱
+        {% elif 'Samsung' in product['name'] %}📲
+        {% elif 'Xiaomi' in product['name'] %}🔴
+        {% elif 'Pixel' in product['name'] %}🟢
+        {% elif 'OnePlus' in product['name'] %}🔵
+        {% elif 'Sony' in product['name'] %}🟣
+        {% else %}📱
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div>
+      <p style="font-family:var(--mono);font-size:.72rem;color:var(--text-muted);margin-bottom:.5rem;">
+        Product ID: {{ product['id'] }}
+      </p>
+
+      <h1 class="page-title">{{ product['name'] }}</h1>
+
+      <div style="font-family:var(--mono);font-size:1.4rem;color:var(--accent);font-weight:600;margin:.75rem 0 1.25rem;">
+        ${{ "%.2f"|format(product['price']) }}
+      </div>
+
+      <p style="color:var(--text-dim);line-height:1.7;margin-bottom:2rem;">
+        {{ product['description'] }}
+      </p>
+
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <a href="{{ url_for('consult') }}" class="btn btn-primary">
+          Request Consultation
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline">
+          View All Products
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Specs mock -->
+  <div class="section-head" style="margin-top:3rem;">
+    <h2>Specifications</h2>
+  </div>
+
+  <div class="card" style="max-width:600px;">
+    <div class="card-body">
+      <table class="data-table">
+        <tbody>
+          <tr>
+            <td style="color:var(--text-muted);width:40%;">Model</td>
+            <td>{{ product['name'] }}</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-muted);">Price</td>
+            <td style="font-family:var(--mono);color:var(--accent);">${{ "%.2f"|format(product['price']) }}</td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-muted);">Availability</td>
+            <td><span style="color:var(--success);">● In Stock</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--text-muted);">Warranty</td>
+            <td>12 months</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer">NexPhone Security Lab · Educational Use Only</footer>
+</body>
+</html>

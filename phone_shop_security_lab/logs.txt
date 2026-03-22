@@ -1,0 +1,32 @@
+# Phone Shop Security Lab — Request Log
+# Format: [TIMESTAMP] ENDPOINT=... | DATA={...}
+# ─────────────────────────────────────────────────
+[2026-03-19 01:38:07] ENDPOINT=/ | DATA={}
+[2026-03-19 01:38:07] ENDPOINT=/search | DATA={'q': 'iPhone'}
+[2026-03-21 10:11:46] ENDPOINT=/ | DATA={}
+[2026-03-21 10:12:20] ENDPOINT=/login | DATA={'username': 'admin', 'password': 'admin123'}
+[2026-03-21 10:12:20] ENDPOINT=/admin | DATA={'user': 'admin'}
+[2026-03-21 10:12:40] ENDPOINT=/ | DATA={}
+[2026-03-21 10:13:29] ENDPOINT=/login | DATA={'username': 'admin', 'password': "' OR '1'='1"}
+[2026-03-21 10:13:29] ENDPOINT=/admin | DATA={'user': 'admin'}
+[2026-03-21 10:13:38] ENDPOINT=/login | DATA={'username': 'admin', 'password': 'gayvl'}
+[2026-03-21 10:14:05] ENDPOINT=/search | DATA={'q': ''}
+[2026-03-21 10:14:11] ENDPOINT=/search | DATA={'q': 'iPhone'}
+[2026-03-21 10:14:14] ENDPOINT=/product/1 | DATA={'id': 1}
+[2026-03-21 10:15:58] ENDPOINT=/consult | DATA={'name': 'Nguyen Kim Dinh', 'phone': '0398426052', 'message': "I'm gay."}
+[2026-03-21 10:16:52] ENDPOINT=/consult | DATA={'name': 'Nguyen Kim Dinh', 'phone': '0398426052', 'message': "I'm gay."}
+[2026-03-21 10:17:18] ENDPOINT=/ | DATA={}
+[2026-03-21 10:19:24] ENDPOINT=/ | DATA={}
+[2026-03-21 10:19:34] ENDPOINT=/product/2 | DATA={'id': 2}
+[2026-03-21 10:19:42] ENDPOINT=/search | DATA={'q': ''}
+[2026-03-21 10:19:45] ENDPOINT=/search | DATA={'q': 'samsung'}
+[2026-03-21 10:19:51] ENDPOINT=/ | DATA={}
+[2026-03-21 10:23:38] ENDPOINT=/ | DATA={}
+[2026-03-21 10:25:07] ENDPOINT=/login | DATA={'username': 'alice', 'password': 'alice99'}
+[2026-03-21 10:25:07] ENDPOINT=/ | DATA={}
+[2026-03-21 10:27:00] ENDPOINT=/search | DATA={'q': ''}
+[2026-03-21 10:27:04] ENDPOINT=/search | DATA={'q': "iPhone' AND 1=1 --"}
+[2026-03-21 10:27:46] ENDPOINT=/ | DATA={}
+[2026-03-21 10:50:13] ENDPOINT=/ | DATA={}
+[2026-03-21 10:50:33] ENDPOINT=/login | DATA={'username': 'admin', 'password': 'admin123'}
+[2026-03-21 10:50:34] ENDPOINT=/admin | DATA={'user': 'admin'}

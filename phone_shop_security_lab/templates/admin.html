@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — NexPhone Security Lab</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="{{ url_for('index') }}" class="nav-brand"><span>⬡</span> NexPhone</a>
+  <ul class="nav-links">
+    <li><a href="{{ url_for('index') }}">Shop</a></li>
+    <li><a href="{{ url_for('search') }}">Search</a></li>
+    <li><a href="{{ url_for('admin') }}" class="active">Admin</a></li>
+    <li><a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Logout</a></li>
+  </ul>
+  {% if secure_mode %}
+  <span class="mode-badge secure">Secure Mode</span>
+  {% else %}
+  <span class="mode-badge vuln">Vulnerable Mode</span>
+  {% endif %}
+</nav>
+
+<div class="container page-wrapper">
+
+  <div class="hero" style="padding-bottom:1.5rem;">
+    <p class="hero-label">Admin Panel</p>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">
+      Logged in as <span class="code-inline">{{ session.username }}</span>
+      <span class="role-badge admin">admin</span>
+    </p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Total Users</div>
+      <div class="stat-value">{{ total_users }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Consultations</div>
+      <div class="stat-value">{{ total_consult }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Security Mode</div>
+      <div class="stat-value" style="font-size:1.2rem;padding-top:.4rem;">
+        {% if secure_mode %}
+        <span style="color:var(--success);">SECURE</span>
+        {% else %}
+        <span style="color:var(--danger);">VULN</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Log Entries</div>
+      <div class="stat-value">{{ last_logs|length }}</div>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="section-head">
+    <h2>All Users</h2>
+  </div>
+  <div class="card" style="margin-bottom:2rem;">
+    <div class="card-body" style="padding:0;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Password (stored)</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td style="font-family:var(--mono);">{{ u['id'] }}</td>
+            <td><strong style="color:var(--text);">{{ u['username'] }}</strong></td>
+            <td>
+              <span class="code-inline" style="word-break:break-all;">
+                {{ u['password'] }}
+              </span>
+              {% if not secure_mode %}
+              <span style="font-size:.68rem;color:var(--danger);margin-left:.5rem;">⚠ plain text</span>
+              {% else %}
+              <span style="font-size:.68rem;color:var(--success);margin-left:.5rem;">✔ hashed</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if u['role'] == 'admin' %}
+              <span class="role-badge admin">{{ u['role'] }}</span>
+              {% else %}
+              <span class="role-badge customer">{{ u['role'] }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Consultations Table -->
+  <div class="section-head">
+    <h2>Consultation Requests</h2>
+  </div>
+  <div class="card" style="margin-bottom:2rem;">
+    <div class="card-body" style="padding:0;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in consultations %}
+          <tr>
+            <td style="font-family:var(--mono);">{{ c['id'] }}</td>
+            <td style="color:var(--text);">{{ c['name'] }}</td>
+            <td style="font-family:var(--mono);font-size:.8rem;">{{ c['phone'] }}</td>
+            <td style="max-width:300px;word-break:break-word;">{{ c['message'] }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" style="text-align:center;color:var(--text-muted);">No consultations yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Logs -->
+  <div class="section-head">
+    <h2>Recent Logs (last 5)</h2>
+  </div>
+  <div class="card" style="margin-bottom:2rem;">
+    <div class="card-body">
+      {% if last_logs %}
+      {% for line in last_logs %}
+      <div class="log-entry">{{ line }}</div>
+      {% endfor %}
+      {% else %}
+      <p style="color:var(--text-muted);font-size:.85rem;">No logs yet.</p>
+      {% endif %}
+      <p style="margin-top:.75rem;font-size:.75rem;color:var(--text-muted);">
+        Full log file: <code class="code-inline">logs.txt</code> in project root.
+      </p>
+    </div>
+  </div>
+
+  <!-- Security Comparison Box -->
+  <div class="section-head">
+    <h2>Security State Reference</h2>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:2rem;">
+    <!-- Vulnerable column -->
+    <div style="border:1px solid rgba(255,77,106,.3);border-radius:var(--radius-lg);padding:1.25rem;background:rgba(255,77,106,.04);">
+      <p style="font-family:var(--mono);font-size:.72rem;color:var(--danger);letter-spacing:1px;text-transform:uppercase;margin-bottom:.75rem;">
+        ⚠ Vulnerable Mode (SECURE_MODE = False)
+      </p>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:.4rem;">
+        <li style="font-size:.82rem;color:var(--text-muted);">❌ String-concatenated SQL queries</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">❌ Plain-text password storage</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">❌ SQL errors exposed to users</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">❌ No input validation</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">❌ Auth bypass possible</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">❌ UNION data extraction works</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">❌ Blind injection detectable</li>
+      </ul>
+    </div>
+    <!-- Secure column -->
+    <div style="border:1px solid rgba(46,213,115,.3);border-radius:var(--radius-lg);padding:1.25rem;background:rgba(46,213,115,.04);">
+      <p style="font-family:var(--mono);font-size:.72rem;color:var(--success);letter-spacing:1px;text-transform:uppercase;margin-bottom:.75rem;">
+        ✔ Secure Mode (SECURE_MODE = True)
+      </p>
+      <ul style="list-style:none;display:flex;flex-direction:column;gap:.4rem;">
+        <li style="font-size:.82rem;color:var(--text-muted);">✅ Parameterized queries (? placeholders)</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">✅ bcrypt password hashing</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">✅ Generic error messages only</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">✅ Input length validation</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">✅ Auth bypass impossible</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">✅ UNION injection neutralized</li>
+        <li style="font-size:.82rem;color:var(--text-muted);">✅ Blind injection indistinguishable</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SQLMap guide snippet -->
+  <div class="lab-panel">
+    <div class="lab-panel-title">Quick SQLMap Commands</div>
+    <p style="color:var(--text-muted);font-size:.82rem;margin-bottom:.75rem;">
+      Run these from your terminal while the server is running in VULNERABLE mode:
+    </p>
+    <div class="sql-box" style="color:#7adbff;border-left-color:var(--accent);">
+# Enumerate databases via login form
+sqlmap -u "http://127.0.0.1:5000/login" \
+  --data="username=admin&password=123" --method=POST --dbs
+
+# Dump all tables via consult form
+sqlmap -u "http://127.0.0.1:5000/consult" \
+  --data="name=test&phone=123&message=hi" --method=POST --dump
+
+# Test search GET parameter
+sqlmap -u "http://127.0.0.1:5000/search?q=iPhone" --dbs</div>
+  </div>
+
+</div>
+
+<footer class="footer">NexPhone Security Lab · Educational Use Only</footer>
+</body>
+</html>

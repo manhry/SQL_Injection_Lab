@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — NexPhone Security Lab</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<nav class="nav">
+  <a href="{{ url_for('index') }}" class="nav-brand"><span>⬡</span> NexPhone</a>
+  <ul class="nav-links">
+    <li><a href="{{ url_for('index') }}">Shop</a></li>
+  </ul>
+  {% if secure_mode %}
+  <span class="mode-badge secure">Secure Mode</span>
+  {% else %}
+  <span class="mode-badge vuln">Vulnerable Mode</span>
+  {% endif %}
+</nav>
+
+<div class="container page-wrapper" style="display:flex;gap:2.5rem;flex-wrap:wrap;align-items:flex-start;">
+
+  <!-- Login Form -->
+  <div style="flex:1;min-width:280px;max-width:460px;">
+    <div class="hero" style="padding-bottom:1.5rem;">
+      <p class="hero-label">Authentication</p>
+      <h1 class="page-title">Sign In</h1>
+      <p class="page-subtitle">
+        {% if not secure_mode %}
+        ⚠ Vulnerable mode: SQL Injection is possible on this form.
+        {% else %}
+        ✔ Secure mode: Parameterized queries protect this form.
+        {% endif %}
+      </p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-danger">⚠ {{ error }}</div>
+    {% endif %}
+
+    <div class="form-card" style="max-width:100%;">
+      <form method="POST" action="{{ url_for('login') }}" autocomplete="off">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" class="form-control"
+                 placeholder="e.g. admin" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="text" name="password" class="form-control"
+                 placeholder="Enter password"
+                 style="font-family:var(--mono);">
+          <p style="font-size:.75rem;color:var(--text-muted);margin-top:.35rem;">
+            (shown as plain text for lab demonstration)
+          </p>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+          Sign In →
+        </button>
+      </form>
+    </div>
+
+    <!-- Raw SQL display (vulnerable mode) -->
+    {% if raw_sql %}
+    <div style="margin-top:1.5rem;">
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--danger);text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem;">
+        ⚡ Executed SQL Query:
+      </p>
+      <div class="sql-box">{{ raw_sql }}</div>
+    </div>
+    {% endif %}
+
+    <!-- Demo credentials -->
+    <div class="card" style="margin-top:1.5rem;">
+      <div class="card-body">
+        <p style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:.75rem;">
+          Demo Credentials
+        </p>
+        <table class="data-table">
+          <thead>
+            <tr><th>Username</th><th>Password</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="code-inline">admin</span></td>
+              <td><span class="code-inline">admin123</span></td>
+              <td><span class="role-badge admin">admin</span></td>
+            </tr>
+            <tr>
+              <td><span class="code-inline">user1</span></td>
+              <td><span class="code-inline">pass1</span></td>
+              <td><span class="role-badge customer">customer</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attack Lab Panel -->
+  {% if not secure_mode %}
+  <div style="flex:1;min-width:280px;max-width:440px;">
+    <div class="lab-panel" style="margin-top:0;">
+      <div class="lab-panel-title">Attack Lab — Authentication Bypass</div>
+
+      <p style="color:var(--text-muted);font-size:.82rem;line-height:1.6;margin-bottom:1.25rem;">
+        The login query uses <strong>string concatenation</strong>.
+        Inject into the <strong>username</strong> or <strong>password</strong> field:
+      </p>
+
+      <!-- How the query looks -->
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted);margin-bottom:.4rem;">Vulnerable query template:</p>
+      <div class="sql-box">SELECT * FROM users WHERE username = '{username}' AND password = '{password}'</div>
+
+      <p style="font-family:var(--mono);font-size:.7rem;color:var(--warning);text-transform:uppercase;letter-spacing:1px;margin:1rem 0 .5rem;">
+        Payloads — click to copy:
+      </p>
+      <ul class="payload-list">
+        <li class="payload-item" title="Classic auth bypass (use in username field, any password)">
+          ' OR '1'='1
+        </li>
+        <li class="payload-item" title="Comment out password check">
+          admin' --
+        </li>
+        <li class="payload-item" title="Always-true with comment">
+          ' OR 1=1 --
+        </li>
+        <li class="payload-item" title="Force admin login">
+          admin'/*
+        </li>
+      </ul>
+
+      <div style="margin-top:1.25rem;padding:.75rem;background:rgba(255,186,8,.06);border:1px solid rgba(255,186,8,.2);border-radius:8px;">
+        <p style="font-size:.78rem;color:var(--warning);line-height:1.6;">
+          <strong>Try:</strong> Username = <code class="code-inline">' OR '1'='1</code>,
+          Password = <code class="code-inline">anything</code><br>
+          → Logs in as the <em>first user in the DB</em> (admin).
+        </p>
+      </div>
+
+      <div style="margin-top:1rem;padding:.75rem;background:rgba(79,158,255,.06);border:1px solid rgba(79,158,255,.2);border-radius:8px;">
+        <p style="font-size:.78rem;color:var(--accent);line-height:1.6;">
+          <strong>Defense:</strong> Enable <code class="code-inline">SECURE_MODE = True</code>
+          in config.py — queries become parameterized and injection fails.
+        </p>
+      </div>
+    </div>
+
+    <!-- Blind SQL panel -->
+    <div class="lab-panel" style="margin-top:1rem;">
+      <div class="lab-panel-title">Blind SQL Injection — Search Endpoint</div>
+      <p style="color:var(--text-muted);font-size:.82rem;margin-bottom:.75rem;">
+        Use <a href="{{ url_for('search') }}">the search page</a> to test boolean/time-based blind injection:
+      </p>
+      <ul class="payload-list">
+        <li class="payload-item" title="Boolean TRUE — returns results">iPhone' AND 1=1 --</li>
+        <li class="payload-item" title="Boolean FALSE — no results">iPhone' AND 1=2 --</li>
+        <li class="payload-item" title="Time-based delay (SQLite heavy op)">iPhone' AND randomblob(100000000) --</li>
+      </ul>
+    </div>
+  </div>
+  {% else %}
+  <!-- Secure mode explanation -->
+  <div style="flex:1;min-width:280px;max-width:440px;">
+    <div class="lab-panel" style="margin-top:0;border-color:rgba(46,213,115,.3);">
+      <div class="lab-panel-title" style="color:var(--success);">Defense Active — Secure Mode</div>
+      <p style="color:var(--text-muted);font-size:.85rem;line-height:1.6;margin-bottom:1rem;">
+        In <strong style="color:var(--success);">Secure Mode</strong> the login query uses
+        a parameterized statement — user input is <em>never</em> concatenated into SQL:
+      </p>
+      <div class="sql-box secure">SELECT * FROM users WHERE username = ?
+-- Input bound as a value, not executable code</div>
+      <p style="color:var(--text-muted);font-size:.82rem;margin-top:1rem;">
+        All injection payloads above will fail. The <code class="code-inline">'</code> character
+        is treated as data, not SQL syntax.
+      </p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<footer class="footer">NexPhone Security Lab · Educational Use Only</footer>
+</body>
+</html>
